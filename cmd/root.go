@@ -1,7 +1,3 @@
-/*
-Copyright © 2026 Joji Panackal jojijospanackal@gmail.com
-*/
-
 package cmd
 
 import (

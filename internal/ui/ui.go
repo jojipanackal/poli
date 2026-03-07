@@ -183,12 +183,14 @@ func PrintGroupList(groups []model.Group, currentGroup string) {
 	bold.Println("  Groups")
 	fmt.Println()
 
-	for _, g := range groups {
+	for i, g := range groups {
 		marker := "  "
 		if strings.EqualFold(g.Name, currentGroup) {
 			marker = green.Sprint("▸ ")
 		}
-		fmt.Printf("  %s%s", marker, g.Name)
+		
+		fmt.Printf("  %2d.", i+1)
+		fmt.Printf(" %s %s", marker, g.Name)
 		dim.Printf("  %s\n", g.CreatedAt.Format("Jan 02, 2006"))
 	}
 	fmt.Println()
@@ -206,7 +208,8 @@ func PrintRequestList(group string, reqs []model.Request) {
 	dim.Printf("  (%d requests)\n", len(reqs))
 	fmt.Println()
 
-	for _, r := range reqs {
+	for i, r := range reqs {
+		dim.Printf("  %2d.", i+1)
 		fmt.Printf("  %s %s", methodColor(r.Method), r.Name)
 		dim.Printf("  %s\n", r.URL)
 	}

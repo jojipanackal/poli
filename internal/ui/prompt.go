@@ -117,16 +117,34 @@ func PromptMethod(defaultMethod string) string {
 
 // PromptHeaders collects headers as key:value pairs.
 func PromptHeaders(existing []struct{ Key, Value string }) []struct{ Key, Value string } {
-	cyan.Print("  Headers ")
-	dim.Println("(key:value, empty to finish)")
-
 	var headers []struct{ Key, Value string }
 
-	// Show existing headers first
-	for _, h := range existing {
-		dim.Printf("    [existing] %s: %s\n", h.Key, h.Value)
-		headers = append(headers, h)
+	if len(existing) > 0 {
+		cyan.Print("  Edit existing headers ")
+		dim.Println("(Enter to keep, '-' to delete)")
+
+		for _, h := range existing {
+			cyan.Printf("    %s ", h.Key)
+			dim.Printf("(%s): ", h.Value)
+
+			scanner.Scan()
+			line := strings.TrimSpace(scanner.Text())
+			
+			if line == "" {
+				headers = append(headers, h)
+			} else if line == "-" {
+				// delete it, so don't append
+			} else {
+				headers = append(headers, struct{ Key, Value string }{
+					Key:   h.Key,
+					Value: line,
+				})
+			}
+		}
 	}
+
+	cyan.Print("  Add new headers ")
+	dim.Println("(key:value, empty to finish)")
 
 	for {
 		fmt.Print("    ")

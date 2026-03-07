@@ -1,6 +1,3 @@
-/*
-Copyright © 2026 Joji Panackal jojijospanackal@gmail.com
-*/
 package cmd
 
 import (
@@ -23,6 +20,15 @@ var useCmd = &cobra.Command{
 
 		if len(args) == 1 {
 			name = args[0]
+			
+			// Resolve index if it's a number
+			var idx int
+			if _, err := fmt.Sscanf(name, "%d", &idx); err == nil {
+				groups, _ := store.ListGroups()
+				if idx > 0 && idx <= len(groups) {
+					name = groups[idx-1].Name
+				}
+			}
 		} else {
 			// Interactive selection
 			groups, err := store.ListGroups()

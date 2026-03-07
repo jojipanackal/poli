@@ -175,18 +175,25 @@ func ListRequests(group string) ([]model.Request, error) {
 	return reqs, nil
 }
 
-// FindRequest tries to find a request by name (case-insensitive, partial match).
+// FindRequest tries to find a request by index (1-based), exact name, or partial match.
 func FindRequest(group, name string) (model.Request, error) {
-	// Try exact match first
-	req, err := LoadRequest(group, name)
-	if err == nil {
-		return req, nil
-	}
-
-	// Try partial / case-insensitive match
 	reqs, err := ListRequests(group)
 	if err != nil {
 		return model.Request{}, err
+	}
+
+	// Try index matching first (e.g., "1", "2")
+	var idx int
+	if _, err := fmt.Sscanf(name, "%d", &idx); err == nil {
+		if idx > 0 && idx <= len(reqs) {
+			return reqs[idx-1], nil
+		}
+	}
+	// Try exact match
+	for _, r := range reqs {
+		if r.Name == name {
+			return r, nil
+		}
 	}
 
 	nameLower := strings.ToLower(name)
