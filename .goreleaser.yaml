@@ -80,6 +80,7 @@ homebrew_casks:
       post:
         install: |
           system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/poli"]
+          system_command "#{staged_path}/poli", args: ["version"]
     caveats: |
       Get started:
         poli new group \"My APIs\"
