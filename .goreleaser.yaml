@@ -62,5 +62,14 @@ brews:
     license: "MIT"
     install: |
       bin.install "poli"
+    post_install: |
+      system "#{bin}/poli", "version"
+    caveats: |
+      Get started:
+        poli new group "My APIs"
+        poli new "Get Users" --url https://jsonplaceholder.typicode.com/users
+        poli ping r1
+
+      Run 'poli help' for all commands.
     test: |
       system "#{bin}/poli", "version"
