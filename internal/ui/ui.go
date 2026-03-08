@@ -188,7 +188,7 @@ func PrintGroupList(groups []model.Group, currentGroup string) {
 		if strings.EqualFold(g.Name, currentGroup) {
 			marker = green.Sprint("▸ ")
 		}
-		
+
 		fmt.Printf("  %2d.", i+1)
 		fmt.Printf(" %s %s", marker, g.Name)
 		dim.Printf("  %s\n", g.CreatedAt.Format("Jan 02, 2006"))
@@ -355,4 +355,16 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen-3] + "..."
+}
+
+func PrintLogo() {
+	logo := `
+    ____        ___
+   / __ \____  / (_)
+  / /_/ / __ \/ / / 
+ / ____/ /_/ / / /  
+/_/    \____/_/_/   `
+
+	color.Cyan(logo)
+	fmt.Println()
 }
