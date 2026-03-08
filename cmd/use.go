@@ -23,7 +23,7 @@ var useCmd = &cobra.Command{
 			
 			// Resolve index if it's a number
 			var idx int
-			if _, err := fmt.Sscanf(name, "%d", &idx); err == nil {
+			if _, err := fmt.Sscanf(name, "g%d", &idx); err == nil {
 				groups, _ := store.ListGroups()
 				if idx > 0 && idx <= len(groups) {
 					name = groups[idx-1].Name

@@ -184,7 +184,7 @@ func FindRequest(group, name string) (model.Request, error) {
 
 	// Try index matching first (e.g., "1", "2")
 	var idx int
-	if _, err := fmt.Sscanf(name, "%d", &idx); err == nil {
+	if _, err := fmt.Sscanf(name, "r%d", &idx); err == nil {
 		if idx > 0 && idx <= len(reqs) {
 			return reqs[idx-1], nil
 		}
@@ -248,4 +248,58 @@ func LoadResponse(group, requestName string) (SavedResponse, error) {
 
 	err = json.Unmarshal(data, &resp)
 	return resp, err
+}
+
+// FindGroup resolves a group by index (g1, g2, ...) or by name (exact / case-insensitive).
+func FindGroup(name string) (model.Group, error) {
+	groups, err := ListGroups()
+	if err != nil {
+		return model.Group{}, err
+	}
+
+	// Try index matching (g1, g2, ...)
+	var idx int
+	if _, err := fmt.Sscanf(name, "g%d", &idx); err == nil {
+		if idx > 0 && idx <= len(groups) {
+			return groups[idx-1], nil
+		}
+	}
+
+	// Exact match
+	for _, g := range groups {
+		if g.Name == name {
+			return g, nil
+		}
+	}
+
+	// Case-insensitive match
+	nameLower := strings.ToLower(name)
+	for _, g := range groups {
+		if strings.ToLower(g.Name) == nameLower {
+			return g, nil
+		}
+	}
+
+	return model.Group{}, fmt.Errorf("group %q not found", name)
+}
+
+// DeleteRequest removes a request and its response file from disk.
+func DeleteRequest(group, name string) error {
+	reqPath := requestPath(group, name)
+	if err := os.Remove(reqPath); err != nil {
+		return fmt.Errorf("failed to delete request %q: %w", name, err)
+	}
+	// Also remove the response file if it exists
+	respPath := responsePath(group, name)
+	os.Remove(respPath) // ignore error — file may not exist
+	return nil
+}
+
+// DeleteGroup removes an entire group directory.
+func DeleteGroup(name string) error {
+	gp := groupPath(name)
+	if _, err := os.Stat(gp); os.IsNotExist(err) {
+		return fmt.Errorf("group %q not found", name)
+	}
+	return os.RemoveAll(gp)
 }
