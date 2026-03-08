@@ -1,5 +1,12 @@
 version: 2
 
+before:
+  hooks:
+    - mkdir -p completions
+    - go run main.go completion bash > completions/poli.bash
+    - go run main.go completion zsh > completions/poli.zsh
+    - go run main.go completion fish > completions/poli.fish
+
 builds:
   - main: .
     binary: poli
