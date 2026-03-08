@@ -17,11 +17,11 @@ builds:
         goarch: arm64
 
 archives:
-  - format: tar.gz
+  - formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
     files:
       - README.md
       - LICENSE
@@ -51,7 +51,7 @@ release:
   prerelease: auto
   name_template: "v{{.Version}}"
 
-brews:
+homebrew_casks:
   - repository:
       owner: jojipanackal
       name: homebrew-tap
@@ -60,10 +60,15 @@ brews:
     homepage: "https://github.com/jojipanackal/poli"
     description: "Terminal-based HTTP client — collections, requests, curl import, zero lag."
     license: "MIT"
+    url:
+      verified: github.com/jojipanackal/poli
     install: |
       bin.install "poli"
-    post_install: |
-      system "#{bin}/poli", "version"
+    hooks:
+      post: |
+        if OS.mac?
+          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/poli"]
+        end
     caveats: |
       Get started:
         poli new group "My APIs"
