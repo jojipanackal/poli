@@ -1,5 +1,12 @@
 version: 2
 
+before:
+  hooks:
+    - mkdir -p completions
+    - go run main.go completion bash > completions/poli.bash
+    - go run main.go completion zsh > completions/poli.zsh
+    - go run main.go completion fish > completions/poli.fish
+
 builds:
   - main: .
     binary: poli
@@ -25,6 +32,7 @@ archives:
     files:
       - README.md
       - LICENSE
+      - completions/*
 
 changelog:
   sort: asc
@@ -62,13 +70,16 @@ homebrew_casks:
     license: "MIT"
     binaries:
       - poli
+    completions:
+      bash: completions/poli.bash
+      zsh: completions/poli.zsh
+      fish: completions/poli.fish
     url:
       verified: "github.com/jojipanackal/poli"
     hooks:
       post:
         install: |
           system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/poli"]
-          system_command "#{staged_path}/poli", args: ["version"]
     caveats: |
       Get started:
         poli new group \"My APIs\"
