@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/fatih/color"
@@ -211,7 +212,7 @@ func PrintRequestList(group string, reqs []model.Request) {
 	for i, r := range reqs {
 		dim.Printf("  %2d.", i+1)
 		fmt.Printf("  %s %s", methodColor(r.Method), r.Name)
-		dim.Printf("  %s\n", r.URL)
+		dim.Printf("  %s\n", truncateURL(r.URL, 60))
 	}
 	fmt.Println()
 }
@@ -355,6 +356,32 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen-3] + "..."
+}
+
+// truncateURL shortens a URL for display, keeping host+path and truncating query params.
+func truncateURL(rawURL string, maxLen int) string {
+	if len(rawURL) <= maxLen {
+		return rawURL
+	}
+
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return truncate(rawURL, maxLen)
+	}
+
+	// Build base: scheme://host/path
+	base := u.Scheme + "://" + u.Host + u.Path
+
+	if u.RawQuery == "" {
+		return truncate(base, maxLen)
+	}
+
+	// Show base + truncated query
+	remaining := maxLen - len(base) - 1 // -1 for "?"
+	if remaining <= 3 {
+		return base + "?..."
+	}
+	return base + "?" + truncate(u.RawQuery, remaining)
 }
 
 func PrintLogo() {
