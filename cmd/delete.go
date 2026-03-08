@@ -24,7 +24,8 @@ Examples:
   poli delete r1
   poli delete --group "My API"
   poli delete --group g1`,
-	Args: cobra.ExactArgs(1),
+	Args:      cobra.ExactArgs(1),
+	GroupID:   "management",
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
 

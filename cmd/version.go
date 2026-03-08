@@ -11,7 +11,8 @@ import (
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number of poli",
-	Long:  `All software has versions. This is poli's`,
+	Long:    `All software has versions. This is poli's`,
+	GroupID: "utility",
 	Run: func(cmd *cobra.Command, args []string) {
 		ui.PrintLogo()
 		fmt.Println("poli version 0.0.1-alpha")

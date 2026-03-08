@@ -15,6 +15,7 @@ var useCmd = &cobra.Command{
 	Long:    `Set the active group so subsequent commands operate on it.`,
 	Aliases: []string{"switch"},
 	Args:    cobra.MaximumNArgs(1),
+	GroupID: "request",
 	Run: func(cmd *cobra.Command, args []string) {
 		var name string
 

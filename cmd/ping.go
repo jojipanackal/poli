@@ -42,7 +42,8 @@ Examples:
   poli ping "Get Users" --raw
   poli ping "Get All Posts" --row 12
   poli ping "Get All Posts" --search "userId=5"`,
-	Args: cobra.ExactArgs(1),
+	Args:      cobra.ExactArgs(1),
+	GroupID:   "request",
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
 		group := mustCurrentGroup()

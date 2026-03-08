@@ -1,6 +1,6 @@
 # poli
 
-A terminal-based HTTP client for managing and executing collections of API requests. Designed as a lightweight, low-latency alternative to Postman, `poli` supports request organization, `curl` importation, and structured JSON response rendering.
+A terminal-based HTTP client for managing and executing collections of API requests. Designed for speed and minimal latency, `poli` supports request organization, `curl` importation, and structured JSON response rendering.
 
 ## Core Features
 
@@ -13,24 +13,30 @@ A terminal-based HTTP client for managing and executing collections of API reque
 ## Help View
 
 ```text
-Alternative to Postman — collections, requests, curl import, zero lag.
+Terminal-based HTTP client — collections, requests, curl import, zero lag.
 
 Usage:
   poli [command]
 
-Available Commands:
-  completion  Generate the autocompletion script for the specified shell
-  delete      Delete a request or group
+Request Operations:
   edit        Edit a saved request
-  help        Help about any command
-  last        Show the last response for a request
   list        List requests in the current group
-  mv          Move a request to another group
   new         Create a new request or group
   ping        Execute a saved request
-  show        Show details of a saved request
   use         Switch to a different group/collection
+
+Collection Management:
+  delete      Delete a request or group
+  last        Show the last response for a request
+  mv          Move a request to another group
+  show        Show details of a saved request
+
+Utility Commands:
   version     Print the version number of poli
+
+Additional Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
 
 Flags:
       --config string   config file (default is $HOME/.poli/config.yaml)
