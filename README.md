@@ -85,7 +85,7 @@ poli ping r1
 - `--headers`: Show response headers.
 - `--expand <key>`: Drill into nested JSON objects.
 - `--row <n>`: View a specific row in a JSON array.
-- `--search <query>`: Filer array results by value or `key=value`.
+- `--search <query>`: Filter array results by value or `key=value`.
 
 ### Navigation
 - `poli use g1`: Switch to the first collection.
