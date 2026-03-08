@@ -60,15 +60,15 @@ homebrew_casks:
     homepage: "https://github.com/jojipanackal/poli"
     description: "Terminal-based HTTP client — collections, requests, curl import, zero lag."
     license: "MIT"
+    binaries:
+      - poli
     url:
-      verified: github.com/jojipanackal/poli
-    install: |
-      bin.install "poli"
+      verified: "github.com/jojipanackal/poli"
     hooks:
-      post: |
-        if OS.mac?
+      post:
+        install: |
           system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/poli"]
-        end
+          system_command "#{staged_path}/poli", args: ["version"]
     caveats: |
       Get started:
         poli new group "My APIs"
@@ -76,5 +76,3 @@ homebrew_casks:
         poli ping r1
 
       Run 'poli help' for all commands.
-    test: |
-      system "#{bin}/poli", "version"
