@@ -22,13 +22,6 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Generate completions
-        run: |
-          mkdir -p completions
-          go run main.go completion bash > completions/poli.bash
-          go run main.go completion zsh > completions/poli.zsh
-          go run main.go completion fish > completions/poli.fish
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
