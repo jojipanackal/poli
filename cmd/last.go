@@ -21,6 +21,7 @@ var lastCmd = &cobra.Command{
 	Use:   "last [name]",
 	Short: "Show the last response for a request",
 	Long: `Retrieve and display the last saved response from a previous ping.
+Supports index (r1, r2, ...) or name.
 
 By default shows only the status code and response body.
 Use flags to see more details:
@@ -34,8 +35,9 @@ Use flags to see more details:
 
 Examples:
   poli last "Get Users"
+  poli last r1
   poli last "Get Users" --headers
-  poli last "Get Users" --full
+  poli last r1 --full
   poli last "Get Users" --expand address
   poli last "Get Users" --raw
   poli last "Get All Posts" --row 12

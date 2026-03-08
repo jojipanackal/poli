@@ -34,10 +34,13 @@ Use flags to see more details:
   --row       Expand a specific row in an array response (1-indexed)
   --search    Filter array by full/partial value or key=value
 
+   -  r1, r2, ... : Reference requests by index from 'poli list'
+
 Examples:
   poli ping "Get Users"
+  poli ping r1
   poli ping "Get Users" --headers
-  poli ping "Get Users" --full
+  poli ping r1 --full
   poli ping "Get Users" --expand address
   poli ping "Get Users" --raw
   poli ping "Get All Posts" --row 12

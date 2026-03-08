@@ -9,6 +9,16 @@ A terminal-based HTTP client for managing and executing collections of API reque
 - **CURL Integration**: Import requests directly from `curl` commands.
 - **Data Rendering**: Automatic tabular formatting for JSON responses.
 - **Offline Access**: Persists last-received responses for offline inspection.
+- **Index Support**: Reference requests as `r1`, `r2` and groups as `g1`, `g2` for faster navigation.
+
+## Indexing System
+
+`poli` allows you to reference requests and collections by their index numbers shown in the `list` command. This saves you from typing out long, descriptive names.
+
+- **Requests**: Use `r1`, `r2`, etc. to reference requests in the active group.
+- **Groups**: Use `g1`, `g2`, etc. to reference collections.
+
+Example: `poli ping r1` instead of `poli ping "Get All Users From Production"`
 
 ## Help View
 
@@ -67,6 +77,8 @@ poli new "Get-Users" --curl 'curl https://api.example.com/users'
 ### Executing Requests
 ```bash
 poli ping "Get-Users"
+# Or using index
+poli ping r1
 ```
 
 ### Inspecting Responses
@@ -74,6 +86,10 @@ poli ping "Get-Users"
 - `--expand <key>`: Drill into nested JSON objects.
 - `--row <n>`: View a specific row in a JSON array.
 - `--search <query>`: Filer array results by value or `key=value`.
+
+### Navigation
+- `poli use g1`: Switch to the first collection.
+- `poli show r2`: View details of the second request in current group.
 
 ## Storage
 
