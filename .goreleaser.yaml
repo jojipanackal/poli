@@ -50,3 +50,26 @@ release:
   draft: false
   prerelease: auto
   name_template: "v{{.Version}}"
+
+brews:
+  - repository:
+      owner: jojipanackal
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    name: poli
+    homepage: "https://github.com/jojipanackal/poli"
+    description: "Terminal-based HTTP client — collections, requests, curl import, zero lag."
+    license: "MIT"
+    install: |
+      bin.install "poli"
+    post_install: |
+      system "#{bin}/poli", "version"
+    caveats: |
+      Get started:
+        poli new group "My APIs"
+        poli new "Get Users" --url https://jsonplaceholder.typicode.com/users
+        poli ping r1
+
+      Run 'poli help' for all commands.
+    test: |
+      system "#{bin}/poli", "version"
