@@ -15,12 +15,15 @@ var showCmd = &cobra.Command{
 	Use:   "show [name]",
 	Short: "Show details of a saved request",
 	Long: `Display a saved request in a structured format.
+Supports index (r1, r2, ...) or name.
 Use --curl flag to output as a curl command.
 
 Examples:
   poli show "Get Users"
+  poli show r1
   poli show "Get Users" --curl`,
-	Args: cobra.ExactArgs(1),
+	Args:    cobra.ExactArgs(1),
+	GroupID: "management",
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
 		group := mustCurrentGroup()

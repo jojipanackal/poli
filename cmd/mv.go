@@ -21,7 +21,8 @@ Examples:
   poli mv r1 g2
   poli mv "Get Users" g2
   poli mv r1 "Other Group"`,
-	Args: cobra.ExactArgs(2),
+	Args:    cobra.ExactArgs(2),
+	GroupID: "management",
 	Run: func(cmd *cobra.Command, args []string) {
 		reqArg := args[0]
 		groupArg := args[1]

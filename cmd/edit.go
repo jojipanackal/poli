@@ -14,11 +14,14 @@ var editCmd = &cobra.Command{
 	Use:   "edit [name]",
 	Short: "Edit a saved request",
 	Long: `Interactively edit the fields of a saved request.
+Supports index (r1, r2, ...) or name.
 Press Enter to keep the current value.
 
 Examples:
-  poli edit "Get Users"`,
-	Args: cobra.ExactArgs(1),
+  poli edit "Get Users"
+  poli edit r1`,
+	Args:    cobra.ExactArgs(1),
+	GroupID: "request",
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
 		group := mustCurrentGroup()

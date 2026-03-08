@@ -23,7 +23,8 @@ Use 'poli new group "Name"' to create a new group instead.
 Examples:
   poli new "Get Users"
   poli new "Get Users" --curl 'curl https://api.example.com/users'`,
-	Args: cobra.MaximumNArgs(1),
+	Args:      cobra.MaximumNArgs(1),
+	GroupID:   "request",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
 			cmd.Help()

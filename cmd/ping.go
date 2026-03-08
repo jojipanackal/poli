@@ -34,15 +34,19 @@ Use flags to see more details:
   --row       Expand a specific row in an array response (1-indexed)
   --search    Filter array by full/partial value or key=value
 
+  - r1, r2, ... : Reference requests by index from 'poli list'
+
 Examples:
   poli ping "Get Users"
+  poli ping r1
   poli ping "Get Users" --headers
-  poli ping "Get Users" --full
+  poli ping r1 --full
   poli ping "Get Users" --expand address
   poli ping "Get Users" --raw
   poli ping "Get All Posts" --row 12
   poli ping "Get All Posts" --search "userId=5"`,
-	Args: cobra.ExactArgs(1),
+	Args:      cobra.ExactArgs(1),
+	GroupID:   "request",
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
 		group := mustCurrentGroup()

@@ -12,9 +12,15 @@ import (
 var useCmd = &cobra.Command{
 	Use:     "use [group]",
 	Short:   "Switch to a different group/collection",
-	Long:    `Set the active group so subsequent commands operate on it.`,
+	Long:    `Set the active group so subsequent commands operate on it.
+Supports index (g1, g2, ...) or name.
+
+Examples:
+  poli use "Digital-Ocean"
+  poli use g1`,
 	Aliases: []string{"switch"},
 	Args:    cobra.MaximumNArgs(1),
+	GroupID: "request",
 	Run: func(cmd *cobra.Command, args []string) {
 		var name string
 

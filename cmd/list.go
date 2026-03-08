@@ -13,6 +13,7 @@ var listCmd = &cobra.Command{
 	Short:   "List requests in the current group",
 	Long:    `List all saved requests in the active group. Use --groups to list all groups instead.`,
 	Aliases: []string{"ls"},
+	GroupID: "request",
 	Run: func(cmd *cobra.Command, args []string) {
 		if listGroups {
 			groups, err := store.ListGroups()

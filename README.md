@@ -1,113 +1,98 @@
-# Poli 🏓
+# poli
 
-**Poli** is a blazing fast, terminal-based HTTP client designed as a lightweight, "techy" alternative to Postman. Built with Go, Poli allows you to manage collections of API requests, import directly from `curl`, and view JSON responses in beautiful, terminal-friendly tables.
+A terminal-based HTTP client for managing and executing collections of API requests. Designed for speed and minimal latency, `poli` supports request organization, `curl` importation, and structured JSON response rendering.
 
-No Electron. No lag. Just your terminal.
+## Core Features
 
-## Features
+- **Performance**: Native Go binary with zero startup overhead.
+- **Collection Management**: Organize requests into logical groups.
+- **CURL Integration**: Import requests directly from `curl` commands.
+- **Data Rendering**: Automatic tabular formatting for JSON responses.
+- **Offline Access**: Persists last-received responses for offline inspection.
+- **Index Support**: Reference requests as `r1`, `r2` and groups as `g1`, `g2` for faster navigation.
 
-- **🚀 Native & Fast:** Written in Go, zero startup lag.
-- **📂 Collections:** Organize your endpoints into manageable groups.
-- **🔄 Curl Import:** Paste a `curl` command to instantly save a request.
-- **📊 Tabular JSON:** JSON responses are automatically rendered as clean, readable tables.
-- **🔍 Deep Dive:** Drill into nested objects with `--expand`, view specific array items with `--row`, or filter arrays with `--search`.
-- **🕒 Offline History:** Automatically saves your last response so you can view it later without hitting the API again.
-- **📝 Interactive Forms:** Create and edit requests with simple CLI prompts.
+## Indexing System
+
+`poli` allows you to reference requests and collections by their index numbers shown in the `list` command. This saves you from typing out long, descriptive names.
+
+- **Requests**: Use `r1`, `r2`, etc. to reference requests in the active group.
+- **Groups**: Use `g1`, `g2`, etc. to reference collections.
+
+Example: `poli ping r1` instead of `poli ping "Get All Users From Production"`
+
+## Help View
+
+```text
+Terminal-based HTTP client — collections, requests, curl import, zero lag.
+
+Usage:
+  poli [command]
+
+Request Operations:
+  edit        Edit a saved request
+  list        List requests in the current group
+  new         Create a new request or group
+  ping        Execute a saved request
+  use         Switch to a different group/collection
+
+Collection Management:
+  delete      Delete a request or group
+  last        Show the last response for a request
+  mv          Move a request to another group
+  show        Show details of a saved request
+
+Utility Commands:
+  version     Print the version number of poli
+
+Additional Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+
+Flags:
+      --config string   config file (default is $HOME/.poli/config.yaml)
+  -g, --group string    active group/collection (default from config)
+  -h, --help            help for poli
+
+Use "poli [command] --help" for more information about a command.
+```
 
 ## Installation
-
-Make sure you have Go installed, then run:
 
 ```bash
 go install github.com/jojipanackal/poli@latest
 ```
 
-*Ensure your `~/go/bin` (or `GOPATH/bin`) is in your system's `PATH`.*
+## Usage
 
-## Quick Start
-
-### 1. Create a Group (Collection)
-Organize your requests into a group.
+### Creating a Collection
 ```bash
-poli new group "JSONPlaceholder"
+poli new group "API-V1"
 ```
 
-### 2. Import a Request from Curl
-The fastest way to add a request is to paste a curl command.
+### Importing a Request
 ```bash
-poli new "Get All Posts" --curl 'curl https://jsonplaceholder.typicode.com/posts'
+poli new "Get-Users" --curl 'curl https://api.example.com/users'
 ```
 
-### 3. Ping the Request
-Hit the API. JSON array responses are automatically formatted as multi-column tables capping at 10 rows.
+### Executing Requests
 ```bash
-poli ping "Get All Posts"
+poli ping "Get-Users"
+# Or using index
+poli ping r1
 ```
 
-## Usage & Commands
+### Inspecting Responses
+- `--headers`: Show response headers.
+- `--expand <key>`: Drill into nested JSON objects.
+- `--row <n>`: View a specific row in a JSON array.
+- `--search <query>`: Filter array results by value or `key=value`.
 
-### Managing Requests
+### Navigation
+- `poli use g1`: Switch to the first collection.
+- `poli show r2`: View details of the second request in current group.
 
-*   **List requests in the current group:**
-    ```bash
-    poli list
-    ```
-*   **List all groups:**
-    ```bash
-    poli list --groups
-    ```
-*   **Switch to a different group:**
-    ```bash
-    poli use "My Other Group"
-    ```
-*   **Create a request interactively:**
-    ```bash
-    poli new "Manual Request"
-    ```
-*   **Edit an existing request:**
-    ```bash
-    poli edit "Get All Posts"
-    ```
-*   **Show request details and underlying curl command:**
-    ```bash
-    poli show "Get All Posts"
-    poli show "Get All Posts" --curl
-    ```
+## Storage
 
-### Executing and Viewing Responses
-
-Use `poli ping` to execute a request, or `poli last` to view the previously saved response without making a new network call. Both commands share the same powerful output flags.
-
-*   **Show Headers (Tabular format):**
-    ```bash
-    poli ping "Get All Posts" --headers
-    ```
-*   **Show Full Raw Response (Status, Headers, and Raw JSON body):**
-    ```bash
-    poli ping "Get All Posts" --full --raw
-    ```
-
-### Drilling into JSON
-
-Poli's table renderer makes it easy to navigate complex JSON without leaving the terminal.
-
-*   **Expand a nested JSON object key:**
-    ```bash
-    poli ping "Get User" --expand address
-    ```
-*   **Expand a specific row in a JSON array:**
-    ```bash
-    poli last "Get All Posts" --row 12
-    ```
-*   **Search/Filter an array by value:**
-    ```bash
-    poli last "Get All Posts" --search "odit"
-    ```
-*   **Search/Filter an array by `key=value`:**
-    ```bash
-    poli last "Get All Posts" --search "userId=5"
-    ```
-*   *(Tip: You can combine `--row` or `--search` with `--raw` to extract the raw JSON of a specific item!)*
-
-## Data Storage
-Poli stores your groups and requests locally as plain JSON files in `~/.poli/groups/`. They are highly inspectable, easy to back up, and version-control friendly. Your configuration is stored at `~/.poli/config.yaml`.
+Configuration and data are persisted locally:
+- **Config**: `~/.poli/config.yaml`
+- **Data**: `~/.poli/groups/` (JSON format)

@@ -1,0 +1,52 @@
+version: 2
+
+builds:
+  - main: .
+    binary: poli
+    ldflags:
+      - -s -w -X github.com/jojipanackal/poli/cmd.Version={{.Version}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+  groups:
+    - title: "✨ Features"
+      regexp: '^.*?feat(\(.+\))?\!?:.+$'
+      order: 0
+    - title: "🐛 Bug Fixes"
+      regexp: '^.*?fix(\(.+\))?\!?:.+$'
+      order: 1
+    - title: "📦 Other"
+      order: 999
+
+release:
+  github:
+    owner: jojipanackal
+    name: poli
+  draft: false
+  prerelease: auto
+  name_template: "v{{.Version}}"

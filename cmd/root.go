@@ -16,11 +16,18 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "poli",
 	Short: "Poli — fast terminal HTTP client",
-	Long:  `Alternative to Postman — collections, requests, curl import, zero lag.`,
+	Long:  `Terminal-based HTTP client — collections, requests, curl import, zero lag.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Load current group from config if not provided via flag
 		if currentGroup == "" {
 			currentGroup = viper.GetString("current_group")
+		}
+
+		// Assign automatic commands to utility group
+		for _, c := range cmd.Root().Commands() {
+			if c.Name() == "completion" || c.Name() == "help" {
+				c.GroupID = "utility"
+			}
 		}
 	},
 }
@@ -31,6 +38,10 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+
+	rootCmd.AddGroup(&cobra.Group{ID: "request", Title: "Request Operations:"})
+	rootCmd.AddGroup(&cobra.Group{ID: "management", Title: "Collection Management:"})
+	rootCmd.AddGroup(&cobra.Group{ID: "utility", Title: "Utility Commands:"})
 
 	rootCmd.PersistentFlags().StringVarP(&currentGroup, "group", "g", "", "active group/collection (default from config)")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.poli/config.yaml)")
