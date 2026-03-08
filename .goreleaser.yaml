@@ -71,8 +71,8 @@ homebrew_casks:
           system_command "#{staged_path}/poli", args: ["version"]
     caveats: |
       Get started:
-        poli new group "My APIs"
-        poli new "Get Users" --url https://jsonplaceholder.typicode.com/users
+        poli new group \"My APIs\"
+        poli new \"Get Users\" --url https://jsonplaceholder.typicode.com/users
         poli ping r1
 
       Run 'poli help' for all commands.
