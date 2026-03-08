@@ -34,7 +34,7 @@ Use flags to see more details:
   --row       Expand a specific row in an array response (1-indexed)
   --search    Filter array by full/partial value or key=value
 
-   -  r1, r2, ... : Reference requests by index from 'poli list'
+  - r1, r2, ... : Reference requests by index from 'poli list'
 
 Examples:
   poli ping "Get Users"
