@@ -35,38 +35,24 @@ func printBodyAsTable(body, indent string, opts ResponseOptions) {
 
 	switch v := raw.(type) {
 	case map[string]interface{}:
-		printObjectTable(v, indent, opts.RequestName, opts.ExpandKey)
-	case []interface{}:
-		// Handle --row: expand a single item from the array
-		if opts.RowIndex > 0 {
-			printArrayRow(v, indent, opts)
-			return
-		}
-		// Handle --search: filter array items
-		if opts.SearchQuery != "" {
-			filtered := filterArray(v, opts.SearchQuery)
-			if len(filtered) == 0 {
-				Warning(fmt.Sprintf("No items matching %q", opts.SearchQuery))
-				return
-			}
-			Info(fmt.Sprintf("Found %d matching items", len(filtered)))
-			fmt.Println()
-			if opts.ShowRaw {
-				for i, item := range filtered {
-					dim.Printf("%s[Match %d]\n", indent, i+1)
-					printRawBody(rawJSON(item), indent)
-					fmt.Println()
+		// If searching/subsetting but root is object, look for arrays inside
+		if (opts.SearchQuery != "" || opts.RowIndex > 0) && opts.ExpandKey == "" {
+			// Find first array field
+			var arrayKey string
+			for k, val := range v {
+				if _, ok := val.([]interface{}); ok {
+					arrayKey = k
+					break
 				}
+			}
+			if arrayKey != "" {
+				printObjectTable(v, indent, opts)
 				return
 			}
-			printArrayTable(filtered, indent, opts.RequestName, "")
-			return
 		}
-		if opts.ShowRaw {
-			printRawBody(body, indent)
-			return
-		}
-		printArrayTable(v, indent, opts.RequestName, "")
+		printObjectTable(v, indent, opts)
+	case []interface{}:
+		printArrayTable(v, indent, opts)
 	default:
 		fmt.Printf("%s%v\n", indent, v)
 	}
@@ -89,7 +75,7 @@ func printArrayRow(arr []interface{}, indent string, opts ResponseOptions) {
 		if opts.ShowRaw {
 			printRawBody(rawJSON(v), indent)
 		} else {
-			printObjectTable(v, indent, opts.RequestName, opts.ExpandKey)
+			printObjectTable(v, indent, opts)
 		}
 	default:
 		fmt.Printf("%s%v\n", indent, v)
@@ -153,14 +139,14 @@ func matchesValue(v interface{}, query string) bool {
 }
 
 // printObjectTable renders a JSON object as a two-column key/value table.
-func printObjectTable(obj map[string]interface{}, indent, requestName string, expandKey string) {
+func printObjectTable(obj map[string]interface{}, indent string, opts ResponseOptions) {
 	// If expanding a specific key, show just that key's content
-	if expandKey != "" {
-		val, ok := obj[expandKey]
+	if opts.ExpandKey != "" {
+		val, ok := obj[opts.ExpandKey]
 		if !ok {
 			// Try case-insensitive
 			for k, v := range obj {
-				if strings.EqualFold(k, expandKey) {
+				if strings.EqualFold(k, opts.ExpandKey) {
 					val = v
 					ok = true
 					break
@@ -169,23 +155,50 @@ func printObjectTable(obj map[string]interface{}, indent, requestName string, ex
 		}
 		if !ok {
 			fmt.Printf("%s", indent)
-			red.Printf("Key %q not found\n", expandKey)
+			red.Printf("Key %q not found\n", opts.ExpandKey)
 			return
 		}
 
 		fmt.Printf("%s", indent)
-		cyan.Printf("%s:\n", expandKey)
+		cyan.Printf("%s:\n", opts.ExpandKey)
 		fmt.Println()
 
 		switch nested := val.(type) {
 		case map[string]interface{}:
-			printObjectTable(nested, indent, requestName, "")
+			printObjectTable(nested, indent, ResponseOptions{RequestName: opts.RequestName})
 		case []interface{}:
-			printArrayTable(nested, indent, requestName, "")
+			printArrayTable(nested, indent, opts)
 		default:
 			fmt.Printf("%s%v\n", indent, nested)
 		}
 		return
+	}
+
+	// Auto-expand search/row if provided and root is object
+	if opts.SearchQuery != "" || opts.RowIndex > 0 {
+		var arrayKey string
+		// Pick first plausible array (usually 'items', 'data', or the only array)
+		for _, k := range []string{"providers", "items", "data", "results", "list"} {
+			if _, ok := obj[k].([]interface{}); ok {
+				arrayKey = k
+				break
+			}
+		}
+		// If none of those, just first array
+		if arrayKey == "" {
+			for k, v := range obj {
+				if _, ok := v.([]interface{}); ok {
+					arrayKey = k
+					break
+				}
+			}
+		}
+
+		if arrayKey != "" {
+			opts.ExpandKey = arrayKey
+			printObjectTable(obj, indent, opts)
+			return
+		}
 	}
 
 	// Collect keys
@@ -221,7 +234,7 @@ func printObjectTable(obj map[string]interface{}, indent, requestName string, ex
 			fmt.Print("    ")
 			dim.Printf("{object: %d keys}", count)
 			fmt.Print("  ")
-			dim.Printf("→ poli last \"%s\" --expand %s\n", requestName, k)
+			dim.Printf("→ poli last \"%s\" --expand %s\n", opts.RequestName, k)
 
 		case []interface{}:
 			count := len(nested)
@@ -230,7 +243,7 @@ func printObjectTable(obj map[string]interface{}, indent, requestName string, ex
 			fmt.Print("    ")
 			dim.Printf("[array: %d items]", count)
 			fmt.Print("  ")
-			dim.Printf("→ poli last \"%s\" --expand %s\n", requestName, k)
+			dim.Printf("→ poli last \"%s\" --expand %s\n", opts.RequestName, k)
 
 		default:
 			strVal := formatValue(v)
@@ -248,15 +261,46 @@ func printObjectTable(obj map[string]interface{}, indent, requestName string, ex
 }
 
 // printArrayTable renders a JSON array as a multi-column table.
-func printArrayTable(arr []interface{}, indent, requestName string, expandKey string) {
+func printArrayTable(arr []interface{}, indent string, opts ResponseOptions) {
 	if len(arr) == 0 {
 		fmt.Printf("%s%s\n", indent, dim.Sprint("(empty array)"))
 		return
 	}
 
+	// Handle --row: expand a single item from the array
+	if opts.RowIndex > 0 {
+		printArrayRow(arr, indent, opts)
+		return
+	}
+
+	// Handle --search: filter array items
+	if opts.SearchQuery != "" {
+		filtered := filterArray(arr, opts.SearchQuery)
+		if len(filtered) == 0 {
+			Warning(fmt.Sprintf("No items matching %q", opts.SearchQuery))
+			return
+		}
+		Info(fmt.Sprintf("Found %d matching items", len(filtered)))
+		fmt.Println()
+		if opts.ShowRaw {
+			for i, item := range filtered {
+				dim.Printf("%s[Match %d]\n", indent, i+1)
+				printRawBody(rawJSON(item), indent)
+				fmt.Println()
+			}
+			return
+		}
+		arr = filtered
+	}
+
+	if opts.ShowRaw {
+		printRawBody(rawJSON(arr), indent)
+		return
+	}
+
 	// Check if it's an array of objects with consistent keys
 	if isObjectArray(arr) {
-		printObjectArrayTable(arr, indent, requestName)
+		printObjectArrayTable(arr, indent, opts.RequestName)
 		return
 	}
 

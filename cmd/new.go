@@ -6,6 +6,7 @@ import (
 	"time"
 
 	curlpkg "github.com/jojipanackal/poli/internal/curl"
+	"github.com/jojipanackal/poli/internal/jsonutil"
 	"github.com/jojipanackal/poli/internal/model"
 	"github.com/jojipanackal/poli/internal/store"
 	"github.com/jojipanackal/poli/internal/ui"
@@ -69,7 +70,14 @@ Examples:
 			// Body (for methods that support it)
 			var body string
 			if method == "POST" || method == "PUT" || method == "PATCH" {
-				body = ui.PromptMultiline("Body")
+				rawBody := ui.PromptMultiline("Body")
+				fixed, modified := jsonutil.AutoFixJSON(rawBody)
+				if modified {
+					ui.Success("Auto-fixed single quotes to double quotes for valid JSON")
+					body = fixed
+				} else {
+					body = rawBody
+				}
 			}
 
 			req = model.Request{

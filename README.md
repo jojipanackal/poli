@@ -1,5 +1,17 @@
 # poli
 
+![GitHub Release](https://img.shields.io/github/v/release/jojipanackal/poli?style=flat-square)
+![Go Report Card](https://goreportcard.com/badge/github.com/jojipanackal/poli?style=flat-square)
+![License](https://img.shields.io/github/license/jojipanackal/poli?style=flat-square)
+
+```text
+    ____        ___
+   / __ \____  / (_)
+  / /_/ / __ \/ / / 
+ / ____/ /_/ / / /  
+/_/    \____/_/_/   
+```
+
 A terminal-based HTTP client for managing and executing collections of API requests. Designed for speed and minimal latency, `poli` supports request organization, `curl` importation, and structured JSON response rendering.
 
 ## Core Features
@@ -10,6 +22,24 @@ A terminal-based HTTP client for managing and executing collections of API reque
 - **Data Rendering**: Automatic tabular formatting for JSON responses.
 - **Offline Access**: Persists last-received responses for offline inspection.
 - **Index Support**: Reference requests as `r1`, `r2` and groups as `g1`, `g2` for faster navigation.
+- **Shell Completion**: Supports Bash, Zsh, and Fish.
+
+## Installation
+
+### Homebrew (macOS/Linux)
+The recommended way to install `poli` is via Homebrew:
+
+```bash
+brew tap jojipanackal/tap
+brew install poli
+```
+
+### Go Install
+If you have Go installed on your system:
+
+```bash
+go install github.com/jojipanackal/poli@latest
+```
 
 ## Indexing System
 
@@ -42,24 +72,14 @@ Collection Management:
   show        Show details of a saved request
 
 Utility Commands:
-  version     Print the version number of poli
-
-Additional Commands:
   completion  Generate the autocompletion script for the specified shell
   help        Help about any command
+  version     Print the version number of poli
 
 Flags:
       --config string   config file (default is $HOME/.poli/config.yaml)
   -g, --group string    active group/collection (default from config)
   -h, --help            help for poli
-
-Use "poli [command] --help" for more information about a command.
-```
-
-## Installation
-
-```bash
-go install github.com/jojipanackal/poli@latest
 ```
 
 ## Usage

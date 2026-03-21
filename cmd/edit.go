@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jojipanackal/poli/internal/jsonutil"
 	"github.com/jojipanackal/poli/internal/model"
 	"github.com/jojipanackal/poli/internal/store"
 	"github.com/jojipanackal/poli/internal/ui"
@@ -64,7 +65,14 @@ Examples:
 					ui.Info("Current body:")
 					fmt.Printf("    %s\n\n", req.Body)
 				}
-				req.Body = ui.PromptMultiline("New body")
+				body := ui.PromptMultiline("New body")
+				fixed, modified := jsonutil.AutoFixJSON(body)
+				if modified {
+					ui.Success("Auto-fixed single quotes to double quotes for valid JSON")
+					req.Body = fixed
+				} else {
+					req.Body = body
+				}
 			}
 		}
 

@@ -25,7 +25,12 @@ func Execute(req model.Request) (Response, error) {
 		bodyReader = strings.NewReader(req.Body)
 	}
 
-	httpReq, err := http.NewRequest(req.Method, req.URL, bodyReader)
+	url := req.URL
+	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+		url = "http://" + url
+	}
+
+	httpReq, err := http.NewRequest(req.Method, url, bodyReader)
 	if err != nil {
 		return Response{}, err
 	}
