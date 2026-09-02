@@ -65,10 +65,43 @@ func TestNewModelSupportsInitialCurlAndRendersPanels(t *testing.T) {
 	m.width = 120
 	m.height = 30
 	view := m.View()
-	for _, label := range []string{"COLLECTION", "REQUEST", "RESPONSE"} {
+	for _, label := range []string{"EDIT REQUEST", "NAME", "URL", "HEADERS", "BODY"} {
 		if !strings.Contains(view, label) {
 			t.Fatalf("view is missing %q:\n%s", label, view)
 		}
+	}
+}
+
+func TestWrapTextKeepsLongResponsesInsideThePane(t *testing.T) {
+	got := wrapText("abcdefghi", 4)
+	if got != "abcd\nefgh\ni" {
+		t.Fatalf("wrapText returned %q", got)
+	}
+
+	unicode := wrapText("你好世界", 2)
+	if unicode != "你好\n世界" {
+		t.Fatalf("wrapText split unicode text incorrectly: %q", unicode)
+	}
+}
+
+func TestNarrowWorkbenchShowsOneBrowsePaneAtATime(t *testing.T) {
+	m, err := newModel("__poli_tui_test_group__", "curl https://example.com")
+	if err != nil {
+		t.Fatalf("newModel returned error: %v", err)
+	}
+	m.screen = screenBrowse
+	m.width = 80
+	m.height = 24
+	m.pane = paneList
+	listView := m.View()
+	if !strings.Contains(listView, "COLLECTION") || strings.Contains(listView, "REQUEST PREVIEW") {
+		t.Fatalf("narrow list view is not isolated:\n%s", listView)
+	}
+
+	m.pane = paneEditor
+	previewView := m.View()
+	if !strings.Contains(previewView, "REQUEST PREVIEW") || strings.Contains(previewView, "COLLECTION") {
+		t.Fatalf("narrow preview view is not isolated:\n%s", previewView)
 	}
 }
 

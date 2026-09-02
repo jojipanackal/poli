@@ -86,6 +86,8 @@ type appModel struct {
 	responseBody     string
 	responseDuration time.Duration
 	showHeaders      bool
+	responseWidth    int
+	responseError    string
 
 	running bool
 	status  string
@@ -171,37 +173,77 @@ func newModel(group, initialCurl string) (*appModel, error) {
 func (m *appModel) setupInputs() {
 	m.nameInput = textinput.New()
 	m.nameInput.Prompt = ""
+	m.nameInput.Placeholder = "Request name"
 	m.nameInput.CharLimit = 100
+	m.styleTextInput(&m.nameInput)
 
 	m.methodInput = textinput.New()
 	m.methodInput.Prompt = ""
+	m.methodInput.Placeholder = "GET"
 	m.methodInput.CharLimit = 16
+	m.styleTextInput(&m.methodInput)
 
 	m.urlInput = textinput.New()
 	m.urlInput.Prompt = ""
+	m.urlInput.Placeholder = "https://api.example.com/path"
 	m.urlInput.CharLimit = 2000
+	m.styleTextInput(&m.urlInput)
 
 	m.headersInput = textarea.New()
 	m.headersInput.Prompt = ""
+	m.headersInput.Placeholder = "Content-Type: application/json\nAuthorization: Bearer ..."
 	m.headersInput.ShowLineNumbers = false
 	m.headersInput.CharLimit = 10000
-	m.headersInput.SetHeight(5)
+	m.headersInput.SetHeight(3)
+	m.styleTextarea(&m.headersInput)
 
 	m.bodyInput = textarea.New()
 	m.bodyInput.Prompt = ""
+	m.bodyInput.Placeholder = "{\n  \"key\": \"value\"\n}"
 	m.bodyInput.ShowLineNumbers = false
 	m.bodyInput.CharLimit = 50000
-	m.bodyInput.SetHeight(8)
+	m.bodyInput.SetHeight(5)
+	m.styleTextarea(&m.bodyInput)
 
 	m.importNameInput = textinput.New()
 	m.importNameInput.Prompt = ""
+	m.importNameInput.Placeholder = "Request name"
 	m.importNameInput.CharLimit = 100
+	m.styleTextInput(&m.importNameInput)
 
 	m.importInput = textarea.New()
 	m.importInput.Prompt = ""
+	m.importInput.Placeholder = "curl https://api.example.com/resource"
 	m.importInput.ShowLineNumbers = false
 	m.importInput.CharLimit = 50000
 	m.importInput.SetHeight(12)
+	m.styleTextarea(&m.importInput)
+}
+
+func (m *appModel) styleTextInput(input *textinput.Model) {
+	input.TextStyle = lipgloss.NewStyle().Foreground(ink)
+	input.PlaceholderStyle = lipgloss.NewStyle().Foreground(muted)
+	input.PromptStyle = lipgloss.NewStyle().Foreground(purple)
+	input.Cursor.TextStyle = lipgloss.NewStyle().Foreground(ink).Background(yellow)
+}
+
+func (m *appModel) styleTextarea(input *textarea.Model) {
+	focused, blurred := textarea.DefaultStyles()
+	focused.Base = lipgloss.NewStyle().Foreground(ink)
+	focused.CursorLine = lipgloss.NewStyle().Foreground(ink).Background(lipgloss.Color("#E9FF9A"))
+	focused.CursorLineNumber = lipgloss.NewStyle().Foreground(purple)
+	focused.EndOfBuffer = lipgloss.NewStyle().Foreground(muted)
+	focused.Placeholder = lipgloss.NewStyle().Foreground(muted)
+	focused.Prompt = lipgloss.NewStyle().Foreground(purple)
+	focused.Text = lipgloss.NewStyle().Foreground(ink)
+	blurred.Base = lipgloss.NewStyle().Foreground(ink)
+	blurred.CursorLine = lipgloss.NewStyle().Foreground(ink).Background(paper)
+	blurred.EndOfBuffer = lipgloss.NewStyle().Foreground(muted)
+	blurred.Placeholder = lipgloss.NewStyle().Foreground(muted)
+	blurred.Prompt = lipgloss.NewStyle().Foreground(muted)
+	blurred.Text = lipgloss.NewStyle().Foreground(ink)
+	input.FocusedStyle = focused
+	input.BlurredStyle = blurred
 }
 
 func (m *appModel) Init() tea.Cmd {
@@ -220,7 +262,8 @@ func (m *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.running = false
 		if msg.err != nil {
 			m.status = "Request failed: " + msg.err.Error()
-			m.responseViewport.SetContent(errorContent(msg.err))
+			m.responseError = msg.err.Error()
+			m.renderResponseContent()
 			return m, nil
 		}
 		m.setResponse(msg.response)
@@ -598,45 +641,54 @@ func (m *appModel) runCurrent() tea.Cmd {
 }
 
 func (m *appModel) setResponse(resp httppkg.Response) {
+	m.responseError = ""
 	m.responseCode = resp.StatusCode
 	m.responseStatus = resp.Status
 	m.responseHeaders = flattenHeaders(resp.Headers)
 	m.responseBody = resp.Body
 	m.responseDuration = resp.Duration
+	m.responseViewport.GotoTop()
 	m.renderResponseContent()
 }
 
 func (m *appModel) setSavedResponse(resp store.SavedResponse) {
+	m.responseError = ""
 	m.responseCode = resp.StatusCode
 	m.responseStatus = resp.Status
 	m.responseHeaders = resp.Headers
 	m.responseBody = resp.Body
 	m.responseDuration = time.Duration(resp.DurationMs) * time.Millisecond
+	m.responseViewport.GotoTop()
 	m.renderResponseContent()
 }
 
 func (m *appModel) clearResponse() {
+	m.responseError = ""
 	m.responseCode = 0
 	m.responseStatus = ""
 	m.responseHeaders = map[string]string{}
 	m.responseBody = ""
 	m.responseDuration = 0
-	m.responseViewport.SetContent(mutedStyle.Render("No response yet.\n\nPress r to run the saved request."))
+	m.responseViewport.SetContent(wrapText("No response yet.\n\nPress r to run the saved request.", m.responseViewport.Width))
 }
 
 func (m *appModel) renderResponseContent() {
+	if m.responseError != "" {
+		m.responseViewport.SetContent(wrapText("REQUEST ERROR\n\n"+m.responseError, m.responseViewport.Width))
+		return
+	}
 	if m.responseCode == 0 && m.responseStatus == "" {
 		m.clearResponse()
 		return
 	}
-	m.responseViewport.SetContent(formatResponse(
+	m.responseViewport.SetContent(wrapText(formatResponse(
 		m.responseCode,
 		m.responseStatus,
 		m.responseHeaders,
 		m.responseBody,
 		m.responseDuration,
 		m.showHeaders,
-	))
+	), m.responseViewport.Width))
 }
 
 func (m *appModel) resizeInputs() {
@@ -689,6 +741,8 @@ func (m *appModel) View() string {
 	var body string
 	if m.screen == screenImport {
 		body = m.renderImport(width-4, height-8)
+	} else if m.screen == screenEdit {
+		body = m.renderEditor(width-4, height-8)
 	} else {
 		body = m.renderWorkbench(width-4, height-8)
 	}
@@ -700,13 +754,14 @@ func (m *appModel) View() string {
 func (m *appModel) renderWorkbench(width, height int) string {
 	if width < 92 {
 		panelWidth := maxInt(30, width)
-		panelHeight := maxInt(8, height/3)
-		return lipgloss.JoinVertical(
-			lipgloss.Left,
-			m.renderList(panelWidth, panelHeight),
-			m.renderEditor(panelWidth, panelHeight+4),
-			m.renderResponsePanel(panelWidth, panelHeight+4),
-		)
+		switch m.pane {
+		case paneEditor:
+			return m.renderEditor(panelWidth, height)
+		case paneResponse:
+			return m.renderResponsePanel(panelWidth, height)
+		default:
+			return m.renderList(panelWidth, height)
+		}
 	}
 
 	listWidth := maxInt(24, width/5)
@@ -745,16 +800,30 @@ func (m *appModel) renderList(width, height int) string {
 
 func (m *appModel) renderEditor(width, height int) string {
 	if m.screen == screenEdit {
-		m.setEditorInputWidth(width)
+		innerWidth := maxInt(18, width-4)
+		m.setEditorInputSize(innerWidth, height)
+		nameWidth := innerWidth
+		methodWidth := innerWidth
+		if innerWidth >= 58 {
+			methodWidth = 16
+			nameWidth = innerWidth - methodWidth - 1
+		}
+		identityFields := fieldBox("NAME", m.nameInput.View(), nameWidth, m.field == fieldName)
+		methodField := fieldBox("METHOD", m.methodInput.View(), methodWidth, m.field == fieldMethod)
+		identityRow := identityFields
+		if innerWidth >= 58 {
+			identityRow = lipgloss.JoinHorizontal(lipgloss.Top, identityFields, " ", methodField)
+		} else {
+			identityRow = lipgloss.JoinVertical(lipgloss.Left, identityFields, methodField)
+		}
 		content := strings.Join([]string{
-			titleStyle.Render("EDIT REQUEST"),
-			fieldView("NAME", m.nameInput.View()),
-			fieldView("METHOD", m.methodInput.View()),
-			fieldView("URL", m.urlInput.View()),
-			fieldView("HEADERS", m.headersInput.View()),
-			fieldView("BODY", m.bodyInput.View()),
+			mutedStyle.Render("TAB next field · CTRL+S save · CTRL+R send · ESC back"),
+			identityRow,
+			fieldBox("URL", m.urlInput.View(), innerWidth, m.field == fieldURL),
+			fieldBox("HEADERS", m.headersInput.View(), innerWidth, m.field == fieldHeaders),
+			fieldBox("BODY", m.bodyInput.View(), innerWidth, m.field == fieldBody),
 		}, "\n")
-		return m.panel("REQUEST", content, width, height, true)
+		return m.panel("EDIT REQUEST", content, width, height, true)
 	}
 
 	if m.current.Name == "" {
@@ -769,22 +838,36 @@ func (m *appModel) renderEditor(width, height int) string {
 	if strings.TrimSpace(m.current.Body) != "" {
 		body = fmt.Sprintf("%d bytes", len(m.current.Body))
 	}
+	innerWidth := maxInt(18, width-4)
+	requestLine := lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		neoBadge(strings.ToUpper(m.current.Method), lime),
+		" ",
+		titleStyle.Render(m.current.Name),
+	)
+	preview := wrapText(curlpkg.Generate(m.current), maxInt(12, innerWidth-4))
 	content := strings.Join([]string{
-		titleStyle.Render("REQUEST"),
-		"",
-		labelStyle.Render(strings.ToUpper(m.current.Method)) + "  " + m.current.Name,
-		mutedStyle.Render(m.current.URL),
-		"",
-		fieldView("HEADERS", headers),
-		fieldView("BODY", body),
-		"",
-		mutedStyle.Render("Enter/e edit this request."),
+		mutedStyle.Render("SELECTED REQUEST"),
+		requestLine,
+		fieldBox("URL", m.current.URL, innerWidth, false),
+		strings.Join([]string{
+			statLine("HEADERS", headers),
+			statLine("BODY", body),
+		}, "\n"),
+		labelStyle.Render("cURL PREVIEW"),
+		codeBlock(preview, innerWidth),
+		mutedStyle.Render("ENTER/e edit · r send · n new · i import"),
 	}, "\n")
-	return m.panel("REQUEST", content, width, height, m.pane == paneEditor)
+	return m.panel("REQUEST PREVIEW", content, width, height, m.pane == paneEditor)
 }
 
 func (m *appModel) renderResponsePanel(width, height int) string {
-	m.responseViewport.Width = maxInt(12, width-6)
+	viewportWidth := maxInt(12, width-6)
+	if m.responseWidth != viewportWidth {
+		m.responseWidth = viewportWidth
+		m.responseViewport.Width = viewportWidth
+		m.renderResponseContent()
+	}
 	m.responseViewport.Height = maxInt(3, height-4)
 	content := m.responseViewport.View()
 	if m.running {
@@ -802,28 +885,35 @@ func (m *appModel) renderImport(width, height int) string {
 	m.importNameInput.Width = inputWidth
 	m.importInput.SetWidth(inputWidth)
 	content := strings.Join([]string{
-		titleStyle.Render("IMPORT cURL"),
 		mutedStyle.Render("Paste a full cURL command, including line continuations."),
 		"",
-		fieldView("REQUEST NAME", m.importNameInput.View()),
-		fieldView("cURL", m.importInput.View()),
+		fieldBox("REQUEST NAME", m.importNameInput.View(), inputWidth, m.importNameInput.Focused()),
+		fieldBox("cURL", m.importInput.View(), inputWidth, m.importInput.Focused()),
 		"",
 		mutedStyle.Render("tab switches fields · ctrl+s imports · esc cancels"),
 	}, "\n")
-	return m.panel("IMPORT", content, width, height, true)
+	return m.panel("IMPORT cURL", content, width, height, true)
 }
 
-func (m *appModel) setEditorInputWidth(width int) {
-	inputWidth := maxInt(16, width-6)
+func (m *appModel) setEditorInputSize(width, height int) {
+	inputWidth := maxInt(10, width-4)
 	m.nameInput.Width = inputWidth
-	m.methodInput.Width = minInt(inputWidth, 16)
+	m.methodInput.Width = minInt(inputWidth, 12)
 	m.urlInput.Width = inputWidth
 	m.headersInput.SetWidth(inputWidth)
 	m.bodyInput.SetWidth(inputWidth)
+	if width >= 58 {
+		m.nameInput.Width = maxInt(10, width-16-5)
+		m.methodInput.Width = 11
+	}
+	availableHeight := maxInt(12, height-8)
+	m.headersInput.SetHeight(maxInt(3, minInt(5, availableHeight/5)))
+	m.bodyInput.SetHeight(maxInt(4, minInt(8, availableHeight/3)))
 }
 
 func (m *appModel) renderFooter() string {
 	keys := []string{
+		keyStyle.Render("tab") + " pane",
 		keyStyle.Render("n") + " new",
 		keyStyle.Render("i") + " import",
 		keyStyle.Render("r") + " run",
@@ -864,8 +954,45 @@ func (m *appModel) panel(title, content string, width, height int, active bool) 
 	return style.Render(titleStyle.Render(title) + "\n" + content)
 }
 
-func fieldView(label, value string) string {
-	return labelStyle.Render(label) + "\n" + value
+func fieldBox(label, value string, width int, focused bool) string {
+	labelView := labelStyle.Render(label)
+	if focused {
+		labelView = lipgloss.NewStyle().Bold(true).Foreground(purple).Render("▸ " + label)
+	}
+	return labelView + "\n" + inputBox(value, width, focused)
+}
+
+func inputBox(value string, width int, focused bool) string {
+	style := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(muted).
+		Padding(0, 1).
+		Width(maxInt(8, width-4))
+	if focused {
+		style = style.BorderForeground(ink).Background(lipgloss.Color("#E9FF9A"))
+	} else {
+		style = style.Background(lipgloss.Color("#FFFDF9"))
+	}
+	return style.Render(value)
+}
+
+func neoBadge(text string, background lipgloss.Color) string {
+	return lipgloss.NewStyle().
+		Bold(true).
+		Foreground(ink).
+		Background(background).
+		Padding(0, 1).
+		Render(text)
+}
+
+func codeBlock(text string, width int) string {
+	return codeStyle.
+		Width(maxInt(8, width-4)).
+		Render(wrapText(text, maxInt(8, width-6)))
+}
+
+func statLine(label, value string) string {
+	return labelStyle.Render(label+": ") + mutedStyle.Render(value)
 }
 
 func formatHeaders(headers []modelpkg.Header) string {
@@ -964,8 +1091,27 @@ func prettyBody(body string) string {
 	return body
 }
 
-func errorContent(err error) string {
-	return errStyle.Render("REQUEST ERROR\n\n" + err.Error())
+func wrapText(text string, width int) string {
+	if width <= 0 {
+		return text
+	}
+
+	text = strings.ReplaceAll(strings.ReplaceAll(text, "\r\n", "\n"), "\t", "  ")
+	inputLines := strings.Split(text, "\n")
+	outputLines := make([]string, 0, len(inputLines))
+	for _, line := range inputLines {
+		runes := []rune(line)
+		if len(runes) == 0 {
+			outputLines = append(outputLines, "")
+			continue
+		}
+		for len(runes) > width {
+			outputLines = append(outputLines, string(runes[:width]))
+			runes = runes[width:]
+		}
+		outputLines = append(outputLines, string(runes))
+	}
+	return strings.Join(outputLines, "\n")
 }
 
 func formatDuration(duration time.Duration) string {
