@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -96,14 +97,67 @@ func TestNarrowWorkbenchShowsOneBrowsePaneAtATime(t *testing.T) {
 	m.height = 24
 	m.pane = paneList
 	listView := m.View()
-	if !strings.Contains(listView, "COLLECTION") || strings.Contains(listView, "REQUEST PREVIEW") {
+	if !strings.Contains(listView, "REQUESTS") || strings.Contains(listView, "PREVIEW") {
 		t.Fatalf("narrow list view is not isolated:\n%s", listView)
 	}
 
 	m.pane = paneEditor
 	previewView := m.View()
-	if !strings.Contains(previewView, "REQUEST PREVIEW") || strings.Contains(previewView, "COLLECTION") {
+	if !strings.Contains(previewView, "PREVIEW") || strings.Contains(previewView, "REQUESTS") {
 		t.Fatalf("narrow preview view is not isolated:\n%s", previewView)
+	}
+}
+
+func TestPreviewArrowsOpenTheRelatedEditorField(t *testing.T) {
+	m, err := newModel("__poli_tui_test_group__", "curl https://example.com")
+	if err != nil {
+		t.Fatalf("newModel returned error: %v", err)
+	}
+	m.screen = screenBrowse
+	m.pane = paneEditor
+
+	m.updateBrowse(tea.KeyMsg{Type: tea.KeyUp})
+	if m.screen != screenEdit || m.field != fieldHeaders {
+		t.Fatalf("up from preview did not open headers: screen=%v field=%v", m.screen, m.field)
+	}
+
+	m.screen = screenBrowse
+	m.pane = paneEditor
+	m.updateBrowse(tea.KeyMsg{Type: tea.KeyDown})
+	if m.screen != screenEdit || m.field != fieldBody {
+		t.Fatalf("down from preview did not open body: screen=%v field=%v", m.screen, m.field)
+	}
+}
+
+func TestEditorArrowsMoveFieldsAtMultilineBoundaries(t *testing.T) {
+	m, err := newModel("__poli_tui_test_group__", "curl https://example.com")
+	if err != nil {
+		t.Fatalf("newModel returned error: %v", err)
+	}
+	m.screen = screenEdit
+	m.headersInput.SetValue("Accept: application/json\nX-Test: one")
+	m.bodyInput.SetValue("{\n  \"ok\": true\n}")
+	m.headersInput.CursorUp()
+	m.focusField(fieldHeaders)
+
+	// The first up moves from the first header line to the URL field.
+	m.updateEdit(tea.KeyMsg{Type: tea.KeyUp})
+	if m.field != fieldURL {
+		t.Fatalf("up at the first header line moved to field %v, want URL", m.field)
+	}
+
+	m.focusField(fieldHeaders)
+	m.updateEdit(tea.KeyMsg{Type: tea.KeyDown})
+	if m.field != fieldHeaders || m.headersInput.Line() != 1 {
+		t.Fatalf("down inside headers did not move within the editor: field=%v line=%d", m.field, m.headersInput.Line())
+	}
+
+	m.focusField(fieldBody)
+	m.bodyInput.CursorUp()
+	m.bodyInput.CursorUp()
+	m.updateEdit(tea.KeyMsg{Type: tea.KeyUp})
+	if m.field != fieldHeaders {
+		t.Fatalf("up at the first body line moved to field %v, want headers", m.field)
 	}
 }
 

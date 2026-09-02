@@ -111,15 +111,14 @@ var (
 	titleStyle       = lipgloss.NewStyle().Bold(true).Foreground(ink)
 	mutedStyle       = lipgloss.NewStyle().Foreground(muted)
 	labelStyle       = lipgloss.NewStyle().Bold(true).Foreground(ink)
-	subheadingStyle  = lipgloss.NewStyle().Bold(true).Foreground(purple).Underline(true)
 	keyStyle         = lipgloss.NewStyle().Bold(true).Foreground(purple)
 	activeStyle      = lipgloss.NewStyle().Bold(true).Foreground(ink).Background(lime)
 	panelTitleStyle  = lipgloss.NewStyle().Bold(true).Foreground(ink).Background(blue).Padding(0, 1)
 	activeTitleStyle = lipgloss.NewStyle().Bold(true).Foreground(paper).Background(purple).Padding(0, 1)
+	sessionStyle     = lipgloss.NewStyle().Bold(true).Foreground(purple)
 	statusStyle      = lipgloss.NewStyle().Foreground(ink).Background(yellow).Padding(0, 1)
 	errStyle         = lipgloss.NewStyle().Foreground(ink).Background(pink).Padding(0, 1)
 	codeStyle        = lipgloss.NewStyle().Foreground(paper).Background(purple).Padding(0, 1)
-	groupStyle       = lipgloss.NewStyle().Bold(true).Foreground(ink).Background(lime).Padding(0, 1)
 )
 
 // Run starts the request workbench for group. initialCurl can be used to open
@@ -317,19 +316,19 @@ func (m *appModel) updateBrowse(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.showHeaders = !m.showHeaders
 		m.renderResponseContent()
 	case "up", "k":
+		if m.pane == paneEditor {
+			m.openEditorAt(fieldHeaders)
+			return m, nil
+		}
 		m.moveSelection(-1)
 	case "down", "j":
+		if m.pane == paneEditor {
+			m.openEditorAt(fieldBody)
+			return m, nil
+		}
 		m.moveSelection(1)
 	case "enter", "e":
-		if m.selected >= 0 {
-			m.current = m.requests[m.selected]
-			m.originalName = m.current.Name
-			m.isNew = false
-			m.syncInputs()
-		}
-		m.screen = screenEdit
-		m.pane = paneEditor
-		m.focusField(fieldName)
+		m.openEditorAt(fieldName)
 	case "n":
 		m.newDraft()
 	case "i":
@@ -383,6 +382,10 @@ func (m *appModel) updateEdit(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.bodyInput.SetValue(formatted)
 		m.status = "Formatted JSON body"
 		return m, nil
+	case "up", "down":
+		if m.moveEditorField(key) {
+			return m, nil
+		}
 	case "tab":
 		m.focusField((m.field + 1) % 5)
 		return m, nil
@@ -477,6 +480,47 @@ func (m *appModel) moveSelection(delta int) {
 		m.selected = 0
 	}
 	m.selectRequest(m.selected)
+}
+
+func (m *appModel) openEditorAt(field editorField) {
+	if m.selected >= 0 && m.selected < len(m.requests) {
+		m.current = m.requests[m.selected]
+		m.originalName = m.current.Name
+		m.isNew = false
+		m.syncInputs()
+	}
+	m.screen = screenEdit
+	m.pane = paneEditor
+	m.focusField(field)
+}
+
+func (m *appModel) moveEditorField(key string) bool {
+	delta := 1
+	if key == "up" {
+		delta = -1
+	}
+
+	if m.field == fieldHeaders {
+		line := m.headersInput.Line()
+		lastLine := m.headersInput.LineCount() - 1
+		if (delta < 0 && line > 0) || (delta > 0 && line < lastLine) {
+			return false
+		}
+	}
+	if m.field == fieldBody {
+		line := m.bodyInput.Line()
+		lastLine := m.bodyInput.LineCount() - 1
+		if (delta < 0 && line > 0) || (delta > 0 && line < lastLine) {
+			return false
+		}
+	}
+
+	next := int(m.field) + delta
+	if next < int(fieldName) || next > int(fieldBody) {
+		return true
+	}
+	m.focusField(editorField(next))
+	return true
 }
 
 func (m *appModel) selectRequest(index int) {
@@ -686,7 +730,7 @@ func (m *appModel) clearResponse() {
 	m.responseHeaders = map[string]string{}
 	m.responseBody = ""
 	m.responseDuration = 0
-	m.responseViewport.SetContent(wrapText("No response yet.\n\nPress r to run the saved request.", m.responseViewport.Width))
+	m.responseViewport.SetContent("NO RESPONSE")
 }
 
 func (m *appModel) renderResponseContent() {
@@ -752,7 +796,7 @@ func (m *appModel) View() string {
 		lipgloss.Top,
 		brandStyle.Render("POLI / "+m.group),
 		"  ",
-		mutedStyle.Render("interactive request workbench"),
+		sessionStyle.Render("REQUEST"),
 	)
 
 	var body string
@@ -798,11 +842,10 @@ func (m *appModel) renderWorkbench(width, height int) string {
 }
 
 func (m *appModel) renderList(width, height int) string {
-	lines := []string{subheadingStyle.Render("REQUESTS"), groupStyle.Render(m.group)}
+	lines := []string{}
 	if len(m.requests) == 0 {
-		lines = append(lines, "", mutedStyle.Render("No saved requests."), "", "Press n to create one.")
+		lines = append(lines, mutedStyle.Render("—"))
 	} else {
-		lines = append(lines, "")
 		for i, req := range m.requests {
 			line := fmt.Sprintf("r%-2d %-6s %s", i+1, strings.ToUpper(req.Method), req.Name)
 			if i == m.selected {
@@ -812,7 +855,7 @@ func (m *appModel) renderList(width, height int) string {
 			}
 		}
 	}
-	return m.panel("COLLECTION", strings.Join(lines, "\n"), width, height, m.pane == paneList)
+	return m.panel("REQUESTS", strings.Join(lines, "\n"), width, height, m.pane == paneList)
 }
 
 func (m *appModel) renderEditor(width, height int) string {
@@ -834,17 +877,16 @@ func (m *appModel) renderEditor(width, height int) string {
 			identityRow = lipgloss.JoinVertical(lipgloss.Left, identityFields, methodField)
 		}
 		content := strings.Join([]string{
-			mutedStyle.Render("TAB next field · CTRL+S save · CTRL+R send · ESC back"),
 			identityRow,
 			fieldBox("URL", m.urlInput.View(), innerWidth, m.field == fieldURL),
-			fieldBox("HEADERS  ·  KEY: VALUE", m.headersInput.View(), innerWidth, m.field == fieldHeaders),
-			fieldBox("BODY  ·  JSON / TEXT  ·  CTRL+J FORMAT", m.bodyInput.View(), innerWidth, m.field == fieldBody),
+			fieldBox("HEADERS", m.headersInput.View(), innerWidth, m.field == fieldHeaders),
+			fieldBox("BODY  ·  JSON", m.bodyInput.View(), innerWidth, m.field == fieldBody),
 		}, "\n")
 		return m.panel("EDIT REQUEST", content, width, height, true)
 	}
 
 	if m.current.Name == "" {
-		return m.panel("REQUEST", mutedStyle.Render("Press n to create a request or i to import cURL."), width, height, m.pane == paneEditor)
+		return m.panel("PREVIEW", mutedStyle.Render("—"), width, height, m.pane == paneEditor)
 	}
 
 	headers := "none"
@@ -864,18 +906,16 @@ func (m *appModel) renderEditor(width, height int) string {
 	)
 	preview := wrapText(curlpkg.Generate(m.current), maxInt(12, innerWidth-4))
 	content := strings.Join([]string{
-		mutedStyle.Render("SELECTED REQUEST"),
 		requestLine,
 		fieldBox("URL", m.current.URL, innerWidth, false),
 		strings.Join([]string{
 			statLine("HEADERS", headers),
 			statLine("BODY", body),
 		}, "\n"),
-		labelStyle.Render("cURL PREVIEW"),
+		labelStyle.Render("CURL"),
 		codeBlock(preview, innerWidth),
-		mutedStyle.Render("ENTER/e edit · r send · n new · i import"),
 	}, "\n")
-	return m.panel("REQUEST PREVIEW", content, width, height, m.pane == paneEditor)
+	return m.panel("PREVIEW", content, width, height, m.pane == paneEditor)
 }
 
 func (m *appModel) renderResponsePanel(width, height int) string {
@@ -890,11 +930,7 @@ func (m *appModel) renderResponsePanel(width, height int) string {
 	if m.running {
 		content = codeStyle.Render("RUNNING...\n\n" + m.current.Method + " " + m.current.URL)
 	}
-	title := "RESPONSE"
-	if m.showHeaders {
-		title += " + HEADERS"
-	}
-	return m.panel(title, content, width, height, m.pane == paneResponse)
+	return m.panel("RESPONSE", content, width, height, m.pane == paneResponse)
 }
 
 func (m *appModel) renderImport(width, height int) string {
@@ -902,14 +938,10 @@ func (m *appModel) renderImport(width, height int) string {
 	m.importNameInput.Width = inputWidth
 	m.importInput.SetWidth(inputWidth)
 	content := strings.Join([]string{
-		mutedStyle.Render("Paste a full cURL command, including line continuations."),
-		"",
 		fieldBox("REQUEST NAME", m.importNameInput.View(), inputWidth, m.importNameInput.Focused()),
-		fieldBox("cURL", m.importInput.View(), inputWidth, m.importInput.Focused()),
-		"",
-		mutedStyle.Render("tab switches fields · ctrl+s imports · esc cancels"),
+		fieldBox("CURL", m.importInput.View(), inputWidth, m.importInput.Focused()),
 	}, "\n")
-	return m.panel("IMPORT cURL", content, width, height, true)
+	return m.panel("IMPORT", content, width, height, true)
 }
 
 func (m *appModel) setEditorInputSize(width, height int) {
@@ -940,9 +972,10 @@ func (m *appModel) renderFooter() string {
 	}
 	if m.screen != screenBrowse {
 		keys = []string{
-			keyStyle.Render("tab") + " next field",
+			keyStyle.Render("tab") + " fields",
 			keyStyle.Render("ctrl+s") + " save",
-			keyStyle.Render("ctrl+r") + " run",
+			keyStyle.Render("ctrl+r") + " send",
+			keyStyle.Render("ctrl+j") + " JSON",
 			keyStyle.Render("esc") + " back",
 		}
 	}
