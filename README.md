@@ -19,6 +19,7 @@ A terminal-based HTTP client for managing and executing collections of API reque
 - **Performance**: Native Go binary with zero startup overhead.
 - **Collection Management**: Organize requests into logical groups.
 - **CURL Integration**: Import requests directly from `curl` commands.
+- **Interactive Workbench**: Use `poli tui` to edit, run, and inspect requests in a full-screen terminal UI.
 - **Data Rendering**: Automatic tabular formatting for JSON responses.
 - **Offline Access**: Persists last-received responses for offline inspection.
 - **Index Support**: Reference requests as `r1`, `r2` and groups as `g1`, `g2` for faster navigation.
@@ -63,6 +64,7 @@ Request Operations:
   list        List requests in the current group
   new         Create a new request or group
   ping        Execute a saved request
+  tui         Open the interactive request workbench
   use         Switch to a different group/collection
 
 Collection Management:
@@ -100,6 +102,29 @@ poli ping "Get-Users"
 # Or using index
 poli ping r1
 ```
+
+### Interactive Workbench
+
+Open the TUI after selecting a collection:
+
+```bash
+poli tui
+```
+
+Inside the workbench:
+
+- `n`: create a request.
+- `i`: paste and import a cURL command.
+- `e` or `enter`: edit the selected request.
+- `ctrl+s`: save the current request.
+- `r` or `ctrl+r`: save and execute it.
+- `h`: toggle response headers.
+- `tab`: move between panes or fields.
+- `q`: quit.
+
+The existing command-line workflow remains available for scripts and shell
+completion. The TUI reads and writes the same `~/.poli` request files, and
+shows the last saved response when you revisit a request.
 
 ### Inspecting Responses
 - `--headers`: Show response headers.
