@@ -118,6 +118,7 @@ Inside the workbench:
 - `e` or `enter`: edit the selected request.
 - `ctrl+s`: save the current request.
 - `r` or `ctrl+r`: save and execute it.
+- `ctrl+j`: format the body when it contains JSON.
 - `h`: toggle response headers.
 - `tab`: move between panes or fields.
 - `q`: quit.

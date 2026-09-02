@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 func TestParseHeaders(t *testing.T) {
@@ -102,6 +104,40 @@ func TestNarrowWorkbenchShowsOneBrowsePaneAtATime(t *testing.T) {
 	previewView := m.View()
 	if !strings.Contains(previewView, "REQUEST PREVIEW") || strings.Contains(previewView, "COLLECTION") {
 		t.Fatalf("narrow preview view is not isolated:\n%s", previewView)
+	}
+}
+
+func TestActivePanelUsesHeavyBorder(t *testing.T) {
+	m := &appModel{}
+	view := m.panel("ACTIVE", "content", 30, 10, true)
+	if !strings.Contains(view, "┃") {
+		t.Fatalf("active panel does not use a visibly heavy border:\n%s", view)
+	}
+}
+
+func TestWorkbenchFillsTheRequestedWidth(t *testing.T) {
+	m, err := newModel("__poli_tui_test_group__", "curl https://example.com")
+	if err != nil {
+		t.Fatalf("newModel returned error: %v", err)
+	}
+	m.screen = screenBrowse
+	m.pane = paneList
+	view := m.renderWorkbench(120, 20)
+	if got := lipgloss.Width(view); got != 120 {
+		t.Fatalf("workbench width is %d, want 120", got)
+	}
+}
+
+func TestFormatJSONBody(t *testing.T) {
+	got, err := formatJSONBody(`{"name":"poli","enabled":true}`)
+	if err != nil {
+		t.Fatalf("formatJSONBody returned error: %v", err)
+	}
+	if got != "{\n  \"name\": \"poli\",\n  \"enabled\": true\n}" {
+		t.Fatalf("unexpected formatted body:\n%s", got)
+	}
+	if _, err := formatJSONBody(`{"broken":}`); err == nil {
+		t.Fatal("formatJSONBody accepted invalid JSON")
 	}
 }
 

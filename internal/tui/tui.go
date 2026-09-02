@@ -107,15 +107,19 @@ var (
 )
 
 var (
-	brandStyle  = lipgloss.NewStyle().Bold(true).Foreground(ink).Background(lime).Padding(0, 1)
-	titleStyle  = lipgloss.NewStyle().Bold(true).Foreground(ink)
-	mutedStyle  = lipgloss.NewStyle().Foreground(muted)
-	labelStyle  = lipgloss.NewStyle().Bold(true).Foreground(ink)
-	keyStyle    = lipgloss.NewStyle().Bold(true).Foreground(purple)
-	activeStyle = lipgloss.NewStyle().Bold(true).Foreground(ink).Background(lime)
-	statusStyle = lipgloss.NewStyle().Foreground(ink).Background(yellow).Padding(0, 1)
-	errStyle    = lipgloss.NewStyle().Foreground(ink).Background(pink).Padding(0, 1)
-	codeStyle   = lipgloss.NewStyle().Foreground(paper).Background(purple).Padding(0, 1)
+	brandStyle       = lipgloss.NewStyle().Bold(true).Foreground(ink).Background(lime).Padding(0, 1)
+	titleStyle       = lipgloss.NewStyle().Bold(true).Foreground(ink)
+	mutedStyle       = lipgloss.NewStyle().Foreground(muted)
+	labelStyle       = lipgloss.NewStyle().Bold(true).Foreground(ink)
+	subheadingStyle  = lipgloss.NewStyle().Bold(true).Foreground(purple).Underline(true)
+	keyStyle         = lipgloss.NewStyle().Bold(true).Foreground(purple)
+	activeStyle      = lipgloss.NewStyle().Bold(true).Foreground(ink).Background(lime)
+	panelTitleStyle  = lipgloss.NewStyle().Bold(true).Foreground(ink).Background(blue).Padding(0, 1)
+	activeTitleStyle = lipgloss.NewStyle().Bold(true).Foreground(paper).Background(purple).Padding(0, 1)
+	statusStyle      = lipgloss.NewStyle().Foreground(ink).Background(yellow).Padding(0, 1)
+	errStyle         = lipgloss.NewStyle().Foreground(ink).Background(pink).Padding(0, 1)
+	codeStyle        = lipgloss.NewStyle().Foreground(paper).Background(purple).Padding(0, 1)
+	groupStyle       = lipgloss.NewStyle().Bold(true).Foreground(ink).Background(lime).Padding(0, 1)
 )
 
 // Run starts the request workbench for group. initialCurl can be used to open
@@ -192,7 +196,7 @@ func (m *appModel) setupInputs() {
 	m.headersInput = textarea.New()
 	m.headersInput.Prompt = ""
 	m.headersInput.Placeholder = "Content-Type: application/json\nAuthorization: Bearer ..."
-	m.headersInput.ShowLineNumbers = false
+	m.headersInput.ShowLineNumbers = true
 	m.headersInput.CharLimit = 10000
 	m.headersInput.SetHeight(3)
 	m.styleTextarea(&m.headersInput)
@@ -200,7 +204,7 @@ func (m *appModel) setupInputs() {
 	m.bodyInput = textarea.New()
 	m.bodyInput.Prompt = ""
 	m.bodyInput.Placeholder = "{\n  \"key\": \"value\"\n}"
-	m.bodyInput.ShowLineNumbers = false
+	m.bodyInput.ShowLineNumbers = true
 	m.bodyInput.CharLimit = 50000
 	m.bodyInput.SetHeight(5)
 	m.styleTextarea(&m.bodyInput)
@@ -214,7 +218,7 @@ func (m *appModel) setupInputs() {
 	m.importInput = textarea.New()
 	m.importInput.Prompt = ""
 	m.importInput.Placeholder = "curl https://api.example.com/resource"
-	m.importInput.ShowLineNumbers = false
+	m.importInput.ShowLineNumbers = true
 	m.importInput.CharLimit = 50000
 	m.importInput.SetHeight(12)
 	m.styleTextarea(&m.importInput)
@@ -366,6 +370,19 @@ func (m *appModel) updateEdit(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "ctrl+r":
 		return m, m.runCurrent()
+	case "ctrl+j":
+		if m.field != fieldBody {
+			m.status = "Move to BODY, then press ctrl+j to format JSON"
+			return m, nil
+		}
+		formatted, err := formatJSONBody(m.bodyInput.Value())
+		if err != nil {
+			m.status = "JSON format failed: " + err.Error()
+			return m, nil
+		}
+		m.bodyInput.SetValue(formatted)
+		m.status = "Formatted JSON body"
+		return m, nil
 	case "tab":
 		m.focusField((m.field + 1) % 5)
 		return m, nil
@@ -512,7 +529,7 @@ func (m *appModel) syncInputs() {
 	m.methodInput.SetValue(strings.ToUpper(m.current.Method))
 	m.urlInput.SetValue(m.current.URL)
 	m.headersInput.SetValue(formatHeaders(m.current.Headers))
-	m.bodyInput.SetValue(m.current.Body)
+	m.bodyInput.SetValue(prettyBody(m.current.Body))
 }
 
 func (m *appModel) focusField(field editorField) {
@@ -740,11 +757,11 @@ func (m *appModel) View() string {
 
 	var body string
 	if m.screen == screenImport {
-		body = m.renderImport(width-4, height-8)
+		body = m.renderImport(width, height-8)
 	} else if m.screen == screenEdit {
-		body = m.renderEditor(width-4, height-8)
+		body = m.renderEditor(width, height-8)
 	} else {
-		body = m.renderWorkbench(width-4, height-8)
+		body = m.renderWorkbench(width, height-8)
 	}
 
 	footer := m.renderFooter()
@@ -781,7 +798,7 @@ func (m *appModel) renderWorkbench(width, height int) string {
 }
 
 func (m *appModel) renderList(width, height int) string {
-	lines := []string{titleStyle.Render("REQUESTS"), mutedStyle.Render(m.group)}
+	lines := []string{subheadingStyle.Render("REQUESTS"), groupStyle.Render(m.group)}
 	if len(m.requests) == 0 {
 		lines = append(lines, "", mutedStyle.Render("No saved requests."), "", "Press n to create one.")
 	} else {
@@ -820,8 +837,8 @@ func (m *appModel) renderEditor(width, height int) string {
 			mutedStyle.Render("TAB next field · CTRL+S save · CTRL+R send · ESC back"),
 			identityRow,
 			fieldBox("URL", m.urlInput.View(), innerWidth, m.field == fieldURL),
-			fieldBox("HEADERS", m.headersInput.View(), innerWidth, m.field == fieldHeaders),
-			fieldBox("BODY", m.bodyInput.View(), innerWidth, m.field == fieldBody),
+			fieldBox("HEADERS  ·  KEY: VALUE", m.headersInput.View(), innerWidth, m.field == fieldHeaders),
+			fieldBox("BODY  ·  JSON / TEXT  ·  CTRL+J FORMAT", m.bodyInput.View(), innerWidth, m.field == fieldBody),
 		}, "\n")
 		return m.panel("EDIT REQUEST", content, width, height, true)
 	}
@@ -942,16 +959,20 @@ func (m *appModel) renderFooter() string {
 
 func (m *appModel) panel(title, content string, width, height int, active bool) string {
 	borderColor := muted
+	border := lipgloss.NormalBorder()
+	header := panelTitleStyle
 	if active {
 		borderColor = purple
+		border = lipgloss.ThickBorder()
+		header = activeTitleStyle
 	}
 	style := lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
+		Border(border).
 		BorderForeground(borderColor).
 		Padding(0, 1).
-		Width(maxInt(10, width-4)).
+		Width(maxInt(10, width-2)).
 		Height(maxInt(5, height-2))
-	return style.Render(titleStyle.Render(title) + "\n" + content)
+	return style.Render(header.Render(" "+title+" ") + "\n" + content)
 }
 
 func fieldBox(label, value string, width int, focused bool) string {
@@ -967,7 +988,7 @@ func inputBox(value string, width int, focused bool) string {
 		Border(lipgloss.NormalBorder()).
 		BorderForeground(muted).
 		Padding(0, 1).
-		Width(maxInt(8, width-4))
+		Width(maxInt(8, width-2))
 	if focused {
 		style = style.BorderForeground(ink).Background(lipgloss.Color("#E9FF9A"))
 	} else {
@@ -987,8 +1008,8 @@ func neoBadge(text string, background lipgloss.Color) string {
 
 func codeBlock(text string, width int) string {
 	return codeStyle.
-		Width(maxInt(8, width-4)).
-		Render(wrapText(text, maxInt(8, width-6)))
+		Width(maxInt(8, width)).
+		Render(wrapText(text, maxInt(8, width-2)))
 }
 
 func statLine(label, value string) string {
@@ -1089,6 +1110,18 @@ func prettyBody(body string) string {
 		return pretty.String()
 	}
 	return body
+}
+
+func formatJSONBody(body string) (string, error) {
+	trimmed := strings.TrimSpace(body)
+	if trimmed == "" {
+		return "", nil
+	}
+	var pretty bytes.Buffer
+	if err := json.Indent(&pretty, []byte(trimmed), "", "  "); err != nil {
+		return "", err
+	}
+	return pretty.String(), nil
 }
 
 func wrapText(text string, width int) string {
